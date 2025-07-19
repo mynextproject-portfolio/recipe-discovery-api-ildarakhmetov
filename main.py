@@ -8,7 +8,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Recipe data model
+# Recipe request model (for POST/PUT requests)
+class RecipeRequest(BaseModel):
+    title: str
+    ingredients: List[str]
+    steps: List[str]
+    prepTime: str
+    cookTime: str
+    difficulty: str
+    cuisine: str
+
+# Recipe response model (includes ID)
+class RecipeResponse(BaseModel):
+    id: int
+    title: str
+    ingredients: List[str]
+    steps: List[str]
+    prepTime: str
+    cookTime: str
+    difficulty: str
+    cuisine: str
+
+# Original Recipe data model (keeping for backward compatibility)
 class Recipe(BaseModel):
     id: int
     title: str
@@ -20,6 +41,10 @@ class Recipe(BaseModel):
     servings: int
     difficulty: str  # "easy", "medium", "hard"
     cuisine: Optional[str] = None
+
+# In-memory storage for new recipe format
+new_recipes_data: List[RecipeResponse] = []
+next_recipe_id = 1
 
 # In-memory sample data
 recipes_data: List[Recipe] = [
@@ -161,11 +186,59 @@ def get_all_recipes():
     """Get all available recipes."""
     return recipes_data
 
+
 @app.get("/recipes/{recipe_id}", response_model=Recipe)
 def get_recipe_by_id(recipe_id: int):
     """Get a specific recipe by ID."""
     for recipe in recipes_data:
         if recipe.id == recipe_id:
             return recipe
+    
+    raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found") 
+
+@app.post("/recipes", response_model=RecipeResponse, status_code=201)
+def create_recipe(recipe_request: RecipeRequest):
+    """Create a new recipe."""
+    global next_recipe_id
+    
+    # Create new recipe with assigned ID
+    new_recipe = RecipeResponse(
+        id=next_recipe_id,
+        title=recipe_request.title,
+        ingredients=recipe_request.ingredients,
+        steps=recipe_request.steps,
+        prepTime=recipe_request.prepTime,
+        cookTime=recipe_request.cookTime,
+        difficulty=recipe_request.difficulty,
+        cuisine=recipe_request.cuisine
+    )
+    
+    # Add to storage and increment ID counter
+    new_recipes_data.append(new_recipe)
+    next_recipe_id += 1
+    
+    return new_recipe
+
+@app.put("/recipes/{recipe_id}", response_model=RecipeResponse)
+def update_recipe(recipe_id: int, recipe_request: RecipeRequest):
+    """Update an existing recipe."""
+    # Find the recipe to update
+    for i, recipe in enumerate(new_recipes_data):
+        if recipe.id == recipe_id:
+            # Update the recipe
+            updated_recipe = RecipeResponse(
+                id=recipe_id,
+                title=recipe_request.title,
+                ingredients=recipe_request.ingredients,
+                steps=recipe_request.steps,
+                prepTime=recipe_request.prepTime,
+                cookTime=recipe_request.cookTime,
+                difficulty=recipe_request.difficulty,
+                cuisine=recipe_request.cuisine
+            )
+            
+            # Replace in storage
+            new_recipes_data[i] = updated_recipe
+            return updated_recipe
     
     raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found") 
