@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app, recipes_data, new_recipes_data, next_recipe_id
+from main import app, all_recipes, next_recipe_id
 
 # Create test client
 client = TestClient(app)
@@ -12,19 +12,20 @@ def reset_data():
     # Import the main module to access the global variable
     import main
     
-    # Store original state
-    original_new_recipes = new_recipes_data.copy()
+    # Store original state (first 4 are sample recipes)
+    original_recipes = all_recipes.copy()
     original_next_id = main.next_recipe_id
     
-    # Clear new recipes data
-    new_recipes_data.clear()
-    main.next_recipe_id = 5  # Start at 5 to avoid overlap with original data (IDs 1-4)
+    # Reset to only sample data (first 4 recipes) and set next ID to 5
+    all_recipes.clear()
+    all_recipes.extend(original_recipes[:4])  # Keep only the 4 sample recipes
+    main.next_recipe_id = 5  # Start at 5 to avoid overlap with sample data (IDs 1-4)
     
     yield
     
     # Restore original state after test
-    new_recipes_data.clear()
-    new_recipes_data.extend(original_new_recipes)
+    all_recipes.clear()
+    all_recipes.extend(original_recipes)
     main.next_recipe_id = original_next_id
 
 
@@ -54,9 +55,9 @@ class TestGetRecipes:
         assert first_recipe["id"] == 1
         assert first_recipe["title"] == "Classic Chocolate Chip Cookies"
         assert "ingredients" in first_recipe
-        assert "instructions" in first_recipe
-        assert "prep_time_minutes" in first_recipe
-        assert "cook_time_minutes" in first_recipe
+        assert "steps" in first_recipe
+        assert "prepTime" in first_recipe
+        assert "cookTime" in first_recipe
         assert "difficulty" in first_recipe
         assert "cuisine" in first_recipe
 
@@ -293,10 +294,11 @@ class TestHappyPathCRUDCycle:
         assert search_response.status_code == 200
         
         search_results = search_response.json()
-        # Note: The search endpoint searches the original recipes_data, not new_recipes_data
-        # So we won't find our newly created recipe in search results
-        # This reveals an inconsistency in the API design
-        assert len(search_results) == 0  # Expected since search uses different data store
+        # SUCCESS! With unified storage, we can now find newly created recipes in search
+        assert len(search_results) == 1  # Recipe is found in unified storage!
+        found_recipe = search_results[0]
+        assert found_recipe["title"] == "Happy Path Recipe"
+        assert found_recipe["id"] == recipe_id
         
         # Step 3: Update the recipe
         updated_recipe_data = {
@@ -321,22 +323,22 @@ class TestHappyPathCRUDCycle:
         assert updated_recipe["cookTime"] == "35 minutes"
         assert updated_recipe["difficulty"] == "easy"
         
-        # Step 4: Verify the update persisted by checking the in-memory storage
-        # Since we can't directly get the updated recipe via GET /recipes/{id} 
-        # (it uses the original data store), we verify through our storage
-        assert len(new_recipes_data) == 1
-        assert new_recipes_data[0].title == "Updated Happy Path Recipe"
-        assert new_recipes_data[0].difficulty == "easy"
-        assert new_recipes_data[0].id == 5  # Should be ID 5 (starting point for new recipes)
+        # Step 4: Verify the update persisted by checking the unified storage
+        # We should now have 5 recipes total (4 sample + 1 created)
+        assert len(all_recipes) == 5
+        created_recipe = all_recipes[4]  # The newly created recipe should be at index 4
+        assert created_recipe.title == "Updated Happy Path Recipe"
+        assert created_recipe.difficulty == "easy"
+        assert created_recipe.id == 5  # Should be ID 5 (starting point for new recipes)
 
 
 class TestDataConsistency:
-    """Test to highlight data consistency issues in the current API design."""
+    """Test to verify data consistency has been resolved with unified storage."""
     
-    def test_data_store_inconsistency(self, reset_data):
-        """Test that highlights the inconsistency between different endpoints' data stores."""
+    def test_unified_data_consistency(self, reset_data):
+        """Test that demonstrates data consistency is now working with unified storage."""
         
-        # Create a recipe using POST /recipes (goes to new_recipes_data)
+        # Create a recipe using POST /recipes
         recipe_data = {
             "title": "Consistency Test Recipe",
             "ingredients": ["test ingredient"],
@@ -351,15 +353,19 @@ class TestDataConsistency:
         assert create_response.status_code == 201
         created_recipe = create_response.json()
         
-        # Try to get this recipe using GET /recipes/{id} (searches recipes_data)
-        # This will fail because GET endpoints use the original data store
+        # SUCCESS! Get recipe by ID now works with unified storage
         get_response = client.get(f"/recipes/{created_recipe['id']}")
-        assert get_response.status_code == 404  # Expected - different data stores
+        assert get_response.status_code == 200
+        retrieved_recipe = get_response.json()
+        assert retrieved_recipe["title"] == "Consistency Test Recipe"
+        assert retrieved_recipe["id"] == created_recipe["id"]
         
-        # Search won't find it either (also uses recipes_data)
+        # SUCCESS! Search now finds the recipe in unified storage
         search_response = client.get("/recipes/search?q=Consistency Test")
         assert search_response.status_code == 200
-        assert len(search_response.json()) == 0  # Expected - different data stores
+        search_results = search_response.json()
+        assert len(search_results) == 1
+        assert search_results[0]["title"] == "Consistency Test Recipe"
 
 
 if __name__ == "__main__":

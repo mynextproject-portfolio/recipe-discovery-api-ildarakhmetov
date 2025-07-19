@@ -8,7 +8,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Recipe request model (for POST/PUT requests)
+# Unified Recipe model
+class Recipe(BaseModel):
+    id: Optional[int] = None
+    title: str
+    ingredients: List[str]
+    steps: List[str]
+    prepTime: str
+    cookTime: str
+    difficulty: str
+    cuisine: str
+
+# Request model for creating/updating recipes (without ID)
 class RecipeRequest(BaseModel):
     title: str
     ingredients: List[str]
@@ -18,7 +29,7 @@ class RecipeRequest(BaseModel):
     difficulty: str
     cuisine: str
 
-# Recipe response model (includes ID)
+# Response model (Recipe with ID)
 class RecipeResponse(BaseModel):
     id: int
     title: str
@@ -29,29 +40,11 @@ class RecipeResponse(BaseModel):
     difficulty: str
     cuisine: str
 
-# Original Recipe data model (keeping for backward compatibility)
-class Recipe(BaseModel):
-    id: int
-    title: str
-    description: str
-    ingredients: List[str]
-    instructions: List[str]
-    prep_time_minutes: int
-    cook_time_minutes: int
-    servings: int
-    difficulty: str  # "easy", "medium", "hard"
-    cuisine: Optional[str] = None
-
-# In-memory storage for new recipe format
-new_recipes_data: List[RecipeResponse] = []
-next_recipe_id = 1
-
-# In-memory sample data
-recipes_data: List[Recipe] = [
+# Unified storage for all recipes with sample data
+all_recipes: List[Recipe] = [
     Recipe(
         id=1,
         title="Classic Chocolate Chip Cookies",
-        description="Soft and chewy chocolate chip cookies that are perfect for any occasion",
         ingredients=[
             "2 1/4 cups all-purpose flour",
             "1 tsp baking soda",
@@ -63,7 +56,7 @@ recipes_data: List[Recipe] = [
             "2 tsp vanilla extract",
             "2 cups chocolate chips"
         ],
-        instructions=[
+        steps=[
             "Preheat oven to 375°F (190°C)",
             "Mix flour, baking soda, and salt in a bowl",
             "Cream butter and sugars until fluffy",
@@ -74,16 +67,14 @@ recipes_data: List[Recipe] = [
             "Bake 9-11 minutes until golden brown",
             "Cool on baking sheet for 2 minutes, then transfer to wire rack"
         ],
-        prep_time_minutes=15,
-        cook_time_minutes=10,
-        servings=24,
+        prepTime="15 minutes",
+        cookTime="10 minutes",
         difficulty="easy",
         cuisine="American"
     ),
     Recipe(
         id=2,
         title="Spaghetti Carbonara",
-        description="Traditional Italian pasta dish with eggs, cheese, and pancetta",
         ingredients=[
             "400g spaghetti",
             "200g pancetta or guanciale, diced",
@@ -92,7 +83,7 @@ recipes_data: List[Recipe] = [
             "Black pepper to taste",
             "Salt for pasta water"
         ],
-        instructions=[
+        steps=[
             "Bring a large pot of salted water to boil",
             "Cook spaghetti according to package directions",
             "Meanwhile, cook pancetta in a large skillet until crispy",
@@ -103,16 +94,14 @@ recipes_data: List[Recipe] = [
             "Add pasta water as needed to create creamy sauce",
             "Serve immediately with extra cheese and pepper"
         ],
-        prep_time_minutes=10,
-        cook_time_minutes=15,
-        servings=4,
+        prepTime="10 minutes",
+        cookTime="15 minutes",
         difficulty="medium",
         cuisine="Italian"
     ),
     Recipe(
         id=3,
         title="Chicken Tikka Masala",
-        description="Creamy and flavorful Indian curry with tender chicken pieces",
         ingredients=[
             "1 lb chicken breast, cubed",
             "1 cup plain yogurt",
@@ -126,7 +115,7 @@ recipes_data: List[Recipe] = [
             "Salt to taste",
             "Fresh cilantro for garnish"
         ],
-        instructions=[
+        steps=[
             "Marinate chicken in yogurt and half the spice blend for 30 minutes",
             "Heat oil in a large pan over medium-high heat",
             "Cook marinated chicken until golden, then set aside",
@@ -137,16 +126,14 @@ recipes_data: List[Recipe] = [
             "Simmer 10-15 minutes until chicken is cooked through",
             "Garnish with cilantro and serve with rice"
         ],
-        prep_time_minutes=45,
-        cook_time_minutes=30,
-        servings=4,
+        prepTime="45 minutes",
+        cookTime="30 minutes",
         difficulty="medium",
         cuisine="Indian"
     ),
     Recipe(
         id=4,
         title="Caesar Salad",
-        description="Classic Caesar salad with homemade dressing and croutons",
         ingredients=[
             "1 large head romaine lettuce, chopped",
             "1/2 cup Parmesan cheese, grated",
@@ -158,7 +145,7 @@ recipes_data: List[Recipe] = [
             "1 tsp Worcestershire sauce",
             "1/4 tsp black pepper"
         ],
-        instructions=[
+        steps=[
             "Wash and dry romaine lettuce thoroughly",
             "Make dressing by mashing garlic and anchovies",
             "Whisk in mayonnaise, lemon juice, and Worcestershire",
@@ -167,13 +154,15 @@ recipes_data: List[Recipe] = [
             "Top with Parmesan cheese and croutons",
             "Serve immediately"
         ],
-        prep_time_minutes=15,
-        cook_time_minutes=0,
-        servings=4,
+        prepTime="15 minutes",
+        cookTime="0 minutes",
         difficulty="easy",
         cuisine="Italian"
     )
 ]
+
+# Set next ID to 5 since we have sample recipes with IDs 1-4
+next_recipe_id = 5
 
 @app.get("/ping")
 def ping():
@@ -181,13 +170,13 @@ def ping():
     # Hot reloading test - this change should be picked up automatically
     return "pong"
 
-@app.get("/recipes", response_model=List[Recipe])
+@app.get("/recipes", response_model=List[RecipeResponse])
 def get_all_recipes():
     """Get all available recipes."""
-    return recipes_data
+    return [RecipeResponse(**recipe.dict()) for recipe in all_recipes if recipe.id is not None]
 
 
-@app.get("/recipes/search", response_model=List[Recipe])
+@app.get("/recipes/search", response_model=List[RecipeResponse])
 def search_recipes(q: Optional[str] = None):
     """Search recipes by title using substring matching (case-insensitive)."""
     # Return empty array if no query parameter provided
@@ -199,18 +188,18 @@ def search_recipes(q: Optional[str] = None):
     
     # Find recipes with titles containing the query string
     matching_recipes = [
-        recipe for recipe in recipes_data 
-        if query_lower in recipe.title.lower()
+        RecipeResponse(**recipe.dict()) for recipe in all_recipes 
+        if recipe.id is not None and query_lower in recipe.title.lower()
     ]
     
     return matching_recipes
 
-@app.get("/recipes/{recipe_id}", response_model=Recipe)
+@app.get("/recipes/{recipe_id}", response_model=RecipeResponse)
 def get_recipe_by_id(recipe_id: int):
     """Get a specific recipe by ID."""
-    for recipe in recipes_data:
+    for recipe in all_recipes:
         if recipe.id == recipe_id:
-            return recipe
+            return RecipeResponse(**recipe.dict())
     
     raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
 
@@ -219,44 +208,27 @@ def create_recipe(recipe_request: RecipeRequest):
     """Create a new recipe."""
     global next_recipe_id
     
-    # Create new recipe with assigned ID
-    new_recipe = RecipeResponse(
-        id=next_recipe_id,
-        title=recipe_request.title,
-        ingredients=recipe_request.ingredients,
-        steps=recipe_request.steps,
-        prepTime=recipe_request.prepTime,
-        cookTime=recipe_request.cookTime,
-        difficulty=recipe_request.difficulty,
-        cuisine=recipe_request.cuisine
-    )
+    # Create recipe from request and assign ID
+    recipe = Recipe(**recipe_request.dict(), id=next_recipe_id)
     
-    # Add to storage and increment ID counter
-    new_recipes_data.append(new_recipe)
+    # Add to unified storage and increment ID counter
+    all_recipes.append(recipe)
     next_recipe_id += 1
     
-    return new_recipe
+    # Return as RecipeResponse
+    return RecipeResponse(**recipe.dict())
 
 @app.put("/recipes/{recipe_id}", response_model=RecipeResponse)
 def update_recipe(recipe_id: int, recipe_request: RecipeRequest):
     """Update an existing recipe."""
     # Find the recipe to update
-    for i, recipe in enumerate(new_recipes_data):
+    for i, recipe in enumerate(all_recipes):
         if recipe.id == recipe_id:
-            # Update the recipe
-            updated_recipe = RecipeResponse(
-                id=recipe_id,
-                title=recipe_request.title,
-                ingredients=recipe_request.ingredients,
-                steps=recipe_request.steps,
-                prepTime=recipe_request.prepTime,
-                cookTime=recipe_request.cookTime,
-                difficulty=recipe_request.difficulty,
-                cuisine=recipe_request.cuisine
-            )
+            # Create updated recipe with preserved ID
+            updated_recipe = Recipe(**recipe_request.dict(), id=recipe_id)
             
-            # Replace in storage
-            new_recipes_data[i] = updated_recipe
-            return updated_recipe
+            # Replace in unified storage
+            all_recipes[i] = updated_recipe
+            return RecipeResponse(**updated_recipe.dict())
     
     raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found") 
