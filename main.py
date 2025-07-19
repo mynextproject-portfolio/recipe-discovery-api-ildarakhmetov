@@ -196,6 +196,24 @@ def get_recipe_by_id(recipe_id: int):
     
     raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found") 
 
+@app.get("/recipes/search", response_model=List[Recipe])
+def search_recipes(q: Optional[str] = None):
+    """Search recipes by title using substring matching (case-insensitive)."""
+    # Return empty array if no query parameter provided
+    if not q:
+        return []
+    
+    # Convert query to lowercase for case-insensitive search
+    query_lower = q.lower()
+    
+    # Find recipes with titles containing the query string
+    matching_recipes = [
+        recipe for recipe in recipes_data 
+        if query_lower in recipe.title.lower()
+    ]
+    
+    return matching_recipes
+
 @app.post("/recipes", response_model=RecipeResponse, status_code=201)
 def create_recipe(recipe_request: RecipeRequest):
     """Create a new recipe."""
