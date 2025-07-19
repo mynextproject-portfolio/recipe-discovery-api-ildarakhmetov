@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app, get_recipe_repository, RecipeRepository, InMemoryRecipeRepository
+from main import app, get_recipe_repository, RecipeRepository, InMemoryRecipeRepository, SQLiteRecipeRepository
 
 # Create test client
 client = TestClient(app)
@@ -17,6 +17,17 @@ def reset_data():
         # Reset to only sample data (first 4 recipes) and set next ID to 5
         repository._recipes = repository._recipes[:4]  # Keep only the 4 sample recipes
         repository._next_id = 5  # Start at 5 to avoid overlap with sample data (IDs 1-4)
+    elif isinstance(repository, SQLiteRecipeRepository):
+        # Reset SQLite database to only contain sample data
+        import sqlite3
+        with sqlite3.connect(repository.db_path) as conn:
+            # Clear all data
+            conn.execute("DELETE FROM recipes")
+            # Reset the auto-increment counter
+            conn.execute("DELETE FROM sqlite_sequence WHERE name='recipes'")
+            conn.commit()
+        # Re-seed with sample data
+        repository._seed_sample_data()
     
     yield repository
     
