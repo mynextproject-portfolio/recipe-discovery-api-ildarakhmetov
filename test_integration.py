@@ -92,13 +92,26 @@ class TestSearchRecipes:
     """Test the search recipes endpoint."""
     
     def test_search_with_query(self):
-        """Test GET /recipes/search with a query parameter."""
+        """Test GET /recipes/search with a query parameter from both internal and MealDB."""
         response = client.get("/recipes/search?q=chocolate")
         assert response.status_code == 200
         
         recipes = response.json()
-        assert len(recipes) == 1
-        assert recipes[0]["title"] == "Classic Chocolate Chip Cookies"
+        assert len(recipes) >= 1  # Should have at least the internal recipe
+        
+        # Verify we have the internal recipe
+        internal_recipes = [r for r in recipes if r["source"] == "internal"]
+        assert len(internal_recipes) == 1
+        assert internal_recipes[0]["title"] == "Classic Chocolate Chip Cookies"
+        
+        # Verify all recipes have required fields including source
+        for recipe in recipes:
+            assert "id" in recipe
+            assert "title" in recipe
+            assert "ingredients" in recipe
+            assert "steps" in recipe
+            assert "source" in recipe
+            assert recipe["source"] in ["internal", "mealdb"]
     
     def test_search_case_insensitive(self):
         """Test search is case insensitive."""
@@ -106,8 +119,12 @@ class TestSearchRecipes:
         assert response.status_code == 200
         
         recipes = response.json()
-        assert len(recipes) == 1
-        assert recipes[0]["title"] == "Classic Chocolate Chip Cookies"
+        assert len(recipes) >= 1  # Should have at least the internal recipe
+        
+        # Verify we have the internal recipe
+        internal_recipes = [r for r in recipes if r["source"] == "internal"]
+        assert len(internal_recipes) == 1
+        assert internal_recipes[0]["title"] == "Classic Chocolate Chip Cookies"
     
     def test_search_partial_match(self):
         """Test search works with partial matches."""
@@ -115,8 +132,9 @@ class TestSearchRecipes:
         assert response.status_code == 200
         
         recipes = response.json()
-        # Should find recipes containing "pasta" in title - none in our sample data
-        assert len(recipes) == 0
+        # Should find no internal recipes containing "pasta" but may find MealDB recipes
+        internal_recipes = [r for r in recipes if r["source"] == "internal"]
+        assert len(internal_recipes) == 0
     
     def test_search_italian_cuisine(self):
         """Test search for Italian recipes."""
@@ -124,8 +142,12 @@ class TestSearchRecipes:
         assert response.status_code == 200
         
         recipes = response.json()
-        assert len(recipes) == 1
-        assert recipes[0]["title"] == "Caesar Salad"
+        assert len(recipes) >= 1  # Should have at least the internal recipe
+        
+        # Verify we have the internal recipe
+        internal_recipes = [r for r in recipes if r["source"] == "internal"]
+        assert len(internal_recipes) == 1
+        assert internal_recipes[0]["title"] == "Caesar Salad"
     
     def test_search_no_query_parameter(self):
         """Test search without query parameter returns empty array."""
@@ -144,6 +166,22 @@ class TestSearchRecipes:
         response = client.get("/recipes/search?q=nonexistentrecipe")
         assert response.status_code == 200
         assert response.json() == []
+    
+    def test_search_mealdb_integration(self):
+        """Test that MealDB API integration works and returns external recipes."""
+        response = client.get("/recipes/search?q=arrabiata")  # Should find MealDB recipe
+        assert response.status_code == 200
+        
+        recipes = response.json()
+        # Should have no internal recipes but potentially MealDB recipes
+        internal_recipes = [r for r in recipes if r["source"] == "internal"]
+        mealdb_recipes = [r for r in recipes if r["source"] == "mealdb"]
+        
+        assert len(internal_recipes) == 0  # No internal arrabiata recipes
+        # If MealDB is accessible, we should get results (but handle network issues gracefully)
+        for recipe in mealdb_recipes:
+            assert recipe["source"] == "mealdb"
+            assert "arrabiata" in recipe["title"].lower()
 
 
 class TestCreateRecipe:

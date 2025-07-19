@@ -16,8 +16,8 @@ FROM base as development
 # Install development dependencies
 RUN pip install --no-cache-dir watchfiles
 
-# Copy the application code
-COPY main.py .
+# Copy all application files
+COPY . .
 
 # Expose the port the app runs on
 EXPOSE 8000
@@ -28,8 +28,8 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 # Production stage (default)
 FROM base as production
 
-# Copy the application code
-COPY main.py .
+# Copy all application files
+COPY . .
 
 # Expose the port the app runs on
 EXPOSE 8000

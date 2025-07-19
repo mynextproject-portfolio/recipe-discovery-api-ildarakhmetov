@@ -4,6 +4,8 @@ from typing import List, Optional
 from abc import ABC, abstractmethod
 import sqlite3
 import json
+import httpx
+import asyncio
 
 app = FastAPI(
     title="Recipe Discovery API",
@@ -21,6 +23,7 @@ class Recipe(BaseModel):
     cookTime: str
     difficulty: str
     cuisine: str
+    source: str = "internal"  # Default to internal for existing recipes
 
 # Request model for creating/updating recipes (without ID)
 class RecipeRequest(BaseModel):
@@ -42,6 +45,72 @@ class RecipeResponse(BaseModel):
     cookTime: str
     difficulty: str
     cuisine: str
+    source: str
+
+# MealDB API Service
+class MealDBService:
+    """Service for interacting with TheMealDB API."""
+    
+    BASE_URL = "https://www.themealdb.com/api/json/v1/1"
+    
+    @staticmethod
+    async def search_meals(query: str) -> List[Recipe]:
+        """Search for meals by name from TheMealDB API."""
+        if not query:
+            return []
+        
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{MealDBService.BASE_URL}/search.php", params={"s": query})
+                response.raise_for_status()
+                data = response.json()
+                
+                if not data.get("meals"):
+                    return []
+                
+                recipes = []
+                for meal in data["meals"]:
+                    recipe = MealDBService._transform_meal_to_recipe(meal)
+                    recipes.append(recipe)
+                
+                return recipes
+        except (httpx.RequestError, httpx.HTTPStatusError, KeyError) as e:
+            # Log error in production, for now return empty list to not break search
+            print(f"Error fetching from MealDB: {e}")
+            return []
+    
+    @staticmethod
+    def _transform_meal_to_recipe(meal: dict) -> Recipe:
+        """Transform MealDB meal data to our Recipe format."""
+        # Extract ingredients and measurements
+        ingredients = []
+        for i in range(1, 21):  # MealDB has up to 20 ingredients
+            ingredient = meal.get(f"strIngredient{i}")
+            measure = meal.get(f"strMeasure{i}")
+            
+            if ingredient and ingredient.strip():
+                if measure and measure.strip():
+                    ingredients.append(f"{measure.strip()} {ingredient.strip()}")
+                else:
+                    ingredients.append(ingredient.strip())
+        
+        # Split instructions into steps
+        instructions = meal.get("strInstructions", "")
+        steps = [step.strip() for step in instructions.split("\r\n") if step.strip()]
+        if not steps:
+            steps = [instructions] if instructions else ["No instructions available"]
+        
+        return Recipe(
+            id=meal.get("idMeal"),
+            title=meal.get("strMeal", "Unknown Recipe"),
+            ingredients=ingredients,
+            steps=steps,
+            prepTime="Unknown",  # MealDB doesn't provide prep time
+            cookTime="Unknown",  # MealDB doesn't provide cook time
+            difficulty="Unknown",  # MealDB doesn't provide difficulty
+            cuisine=meal.get("strArea", "Unknown"),
+            source="mealdb"
+        )
 
 # Abstract Repository Interface
 class RecipeRepository(ABC):
@@ -223,7 +292,7 @@ class InMemoryRecipeRepository(RecipeRepository):
     
     def create(self, recipe_request: RecipeRequest) -> Recipe:
         """Create a new recipe."""
-        recipe = Recipe(**recipe_request.dict(), id=self._next_id)
+        recipe = Recipe(**recipe_request.model_dump(), id=self._next_id)
         self._recipes.append(recipe)
         self._next_id += 1
         return recipe
@@ -232,7 +301,7 @@ class InMemoryRecipeRepository(RecipeRepository):
         """Update an existing recipe."""
         for i, recipe in enumerate(self._recipes):
             if recipe.id == recipe_id:
-                updated_recipe = Recipe(**recipe_request.dict(), id=recipe_id)
+                updated_recipe = Recipe(**recipe_request.model_dump(), id=recipe_id)
                 self._recipes[i] = updated_recipe
                 return updated_recipe
         return None
@@ -467,13 +536,24 @@ def ping():
 def get_all_recipes(repository: RecipeRepository = Depends(get_recipe_repository)):
     """Get all available recipes."""
     recipes = repository.get_all()
-    return [RecipeResponse(**recipe.dict()) for recipe in recipes]
+    return [RecipeResponse(**recipe.model_dump()) for recipe in recipes]
 
 @app.get("/recipes/search", response_model=List[RecipeResponse])
-def search_recipes(q: Optional[str] = None, repository: RecipeRepository = Depends(get_recipe_repository)):
-    """Search recipes by title using substring matching (case-insensitive)."""
-    recipes = repository.search_by_title(q or "")
-    return [RecipeResponse(**recipe.dict()) for recipe in recipes]
+async def search_recipes(q: Optional[str] = None, repository: RecipeRepository = Depends(get_recipe_repository)):
+    """Search recipes by title using substring matching (case-insensitive) from both internal database and MealDB API."""
+    if not q:
+        return []
+    
+    # Search both internal recipes and MealDB simultaneously
+    internal_recipes_task = asyncio.create_task(asyncio.to_thread(repository.search_by_title, q))
+    mealdb_recipes_task = asyncio.create_task(MealDBService.search_meals(q))
+    
+    # Wait for both searches to complete
+    internal_recipes, mealdb_recipes = await asyncio.gather(internal_recipes_task, mealdb_recipes_task)
+    
+    # Combine results
+    all_recipes = internal_recipes + mealdb_recipes
+    return [RecipeResponse(**recipe.model_dump()) for recipe in all_recipes]
 
 @app.get("/recipes/{recipe_id}", response_model=RecipeResponse)
 def get_recipe_by_id(recipe_id: int, repository: RecipeRepository = Depends(get_recipe_repository)):
@@ -481,13 +561,13 @@ def get_recipe_by_id(recipe_id: int, repository: RecipeRepository = Depends(get_
     recipe = repository.get_by_id(recipe_id)
     if recipe is None:
         raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
-    return RecipeResponse(**recipe.dict())
+    return RecipeResponse(**recipe.model_dump())
 
 @app.post("/recipes", response_model=RecipeResponse, status_code=201)
 def create_recipe(recipe_request: RecipeRequest, repository: RecipeRepository = Depends(get_recipe_repository)):
     """Create a new recipe."""
     recipe = repository.create(recipe_request)
-    return RecipeResponse(**recipe.dict())
+    return RecipeResponse(**recipe.model_dump())
 
 @app.put("/recipes/{recipe_id}", response_model=RecipeResponse)
 def update_recipe(recipe_id: int, recipe_request: RecipeRequest, repository: RecipeRepository = Depends(get_recipe_repository)):
@@ -495,4 +575,4 @@ def update_recipe(recipe_id: int, recipe_request: RecipeRequest, repository: Rec
     recipe = repository.update(recipe_id, recipe_request)
     if recipe is None:
         raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
-    return RecipeResponse(**recipe.dict()) 
+    return RecipeResponse(**recipe.model_dump()) 
