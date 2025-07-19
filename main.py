@@ -187,15 +187,6 @@ def get_all_recipes():
     return recipes_data
 
 
-@app.get("/recipes/{recipe_id}", response_model=Recipe)
-def get_recipe_by_id(recipe_id: int):
-    """Get a specific recipe by ID."""
-    for recipe in recipes_data:
-        if recipe.id == recipe_id:
-            return recipe
-    
-    raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found") 
-
 @app.get("/recipes/search", response_model=List[Recipe])
 def search_recipes(q: Optional[str] = None):
     """Search recipes by title using substring matching (case-insensitive)."""
@@ -213,6 +204,15 @@ def search_recipes(q: Optional[str] = None):
     ]
     
     return matching_recipes
+
+@app.get("/recipes/{recipe_id}", response_model=Recipe)
+def get_recipe_by_id(recipe_id: int):
+    """Get a specific recipe by ID."""
+    for recipe in recipes_data:
+        if recipe.id == recipe_id:
+            return recipe
+    
+    raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
 
 @app.post("/recipes", response_model=RecipeResponse, status_code=201)
 def create_recipe(recipe_request: RecipeRequest):
