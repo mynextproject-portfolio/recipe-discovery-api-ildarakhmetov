@@ -9,4 +9,18 @@ services:
       - "8000:8000"
     environment:
       - PYTHONPATH=/app
-    container_name: recipe-api-dev 
+    container_name: recipe-api-dev
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    container_name: recipe-redis
+
+volumes:
+  redis_data: 

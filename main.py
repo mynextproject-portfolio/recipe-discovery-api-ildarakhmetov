@@ -4,14 +4,71 @@ from typing import List, Optional
 from abc import ABC, abstractmethod
 import sqlite3
 import json
+from json import JSONDecodeError, JSONEncoder
 import httpx
 import asyncio
+import redis
+import logging
 
 app = FastAPI(
     title="Recipe Discovery API",
     description="A simple FastAPI service for recipe discovery",
     version="1.0.0"
 )
+
+# Redis Cache Service
+class RedisCache:
+    """Service for Redis caching operations."""
+    
+    def __init__(self, redis_url: str = "redis://redis:6379"):
+        self.redis_url = redis_url
+        self._client = None
+    
+    def _get_client(self):
+        """Get Redis client, creating it if it doesn't exist."""
+        if self._client is None:
+            try:
+                self._client = redis.from_url(self.redis_url, decode_responses=True)
+                # Test connection
+                self._client.ping()
+            except (redis.ConnectionError, redis.TimeoutError) as e:
+                logging.warning(f"Redis connection failed: {e}. Caching will be disabled.")
+                self._client = None
+        return self._client
+    
+    async def get(self, key: str) -> Optional[str]:
+        """Get value from cache."""
+        client = self._get_client()
+        if client is None:
+            return None
+        
+        try:
+            return client.get(key)
+        except (redis.ConnectionError, redis.TimeoutError) as e:
+            logging.warning(f"Redis get failed for key {key}: {e}")
+            return None
+    
+    async def set(self, key: str, value: str, ttl_seconds: int = 86400) -> bool:
+        """Set value in cache with TTL (default 24 hours)."""
+        client = self._get_client()
+        if client is None:
+            return False
+        
+        try:
+            return client.setex(key, ttl_seconds, value)
+        except (redis.ConnectionError, redis.TimeoutError) as e:
+            logging.warning(f"Redis set failed for key {key}: {e}")
+            return False
+
+# Singleton cache instance
+_cache_instance: Optional[RedisCache] = None
+
+def get_cache() -> RedisCache:
+    """Get Redis cache instance."""
+    global _cache_instance
+    if _cache_instance is None:
+        _cache_instance = RedisCache()
+    return _cache_instance
 
 # Unified Recipe model
 class Recipe(BaseModel):
@@ -49,16 +106,37 @@ class RecipeResponse(BaseModel):
 
 # MealDB API Service
 class MealDBService:
-    """Service for interacting with TheMealDB API."""
+    """Service for interacting with TheMealDB API with Redis caching."""
     
     BASE_URL = "https://www.themealdb.com/api/json/v1/1"
+    CACHE_TTL = 86400  # 24 hours in seconds
     
     @staticmethod
     async def search_meals(query: str) -> List[Recipe]:
-        """Search for meals by name from TheMealDB API."""
+        """Search for meals by name from TheMealDB API with Redis caching."""
         if not query:
             return []
         
+        # Create cache key including the search query
+        cache_key = f"mealdb:search:{query.lower().strip()}"
+        cache = get_cache()
+        
+        # Try to get from cache first
+        cached_result = await cache.get(cache_key)
+        if cached_result:
+            try:
+                # Deserialize cached recipes
+                cached_data = json.loads(cached_result)
+                recipes = []
+                for recipe_data in cached_data:
+                    recipe = Recipe(**recipe_data)
+                    recipes.append(recipe)
+                return recipes
+            except (JSONDecodeError, TypeError) as e:
+                logging.warning(f"Failed to deserialize cached data for key {cache_key}: {e}")
+                # Continue to fetch from API if cache is corrupted
+        
+        # Cache miss - fetch from MealDB API
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{MealDBService.BASE_URL}/search.php", params={"s": query})
@@ -66,6 +144,8 @@ class MealDBService:
                 data = response.json()
                 
                 if not data.get("meals"):
+                    # Cache empty results too to avoid repeated API calls for non-existent recipes
+                    await cache.set(cache_key, json.dumps([]), MealDBService.CACHE_TTL)
                     return []
                 
                 recipes = []
@@ -73,10 +153,17 @@ class MealDBService:
                     recipe = MealDBService._transform_meal_to_recipe(meal)
                     recipes.append(recipe)
                 
+                # Cache the results
+                try:
+                    recipes_data = [recipe.model_dump() for recipe in recipes]
+                    await cache.set(cache_key, json.dumps(recipes_data), MealDBService.CACHE_TTL)
+                except (TypeError, Exception) as e:
+                    logging.warning(f"Failed to cache recipes for key {cache_key}: {e}")
+                
                 return recipes
         except (httpx.RequestError, httpx.HTTPStatusError, KeyError) as e:
             # Log error in production, for now return empty list to not break search
-            print(f"Error fetching from MealDB: {e}")
+            logging.error(f"Error fetching from MealDB: {e}")
             return []
     
     @staticmethod
