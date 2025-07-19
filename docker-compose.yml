@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/.venv  # Exclude .venv from volume mount
+    environment:
+      - PYTHONPATH=/app
+    container_name: recipe-api-dev 

@@ -10,4 +10,5 @@ app = FastAPI(
 @app.get("/ping")
 def ping():
     """Health check endpoint to verify the service is running."""
+    # Hot reloading test - this change should be picked up automatically
     return "pong" 
