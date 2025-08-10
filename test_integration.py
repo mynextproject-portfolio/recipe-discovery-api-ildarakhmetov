@@ -1,6 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app, get_recipe_repository, RecipeRepository, InMemoryRecipeRepository, SQLiteRecipeRepository
+from main import app
+from app.dependencies import get_recipe_repository
+from app.repositories.base import RecipeRepository
+from app.repositories.memory import InMemoryRecipeRepository
+from app.repositories.sqlite import SQLiteRecipeRepository
 
 # Create test client
 client = TestClient(app)
