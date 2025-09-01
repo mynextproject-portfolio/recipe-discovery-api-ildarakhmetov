@@ -1,32 +1,20 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import LoadingSpinner from '../../../lib/components/LoadingSpinner.svelte';
-	import { recipesApi } from '../../../lib/api/recipes.js';
 	import type { RecipeResponse } from '../../../lib/types/recipe.js';
+	import type { PageData } from './$types';
 
-	let recipe: RecipeResponse | null = null;
-	let loading = true;
-	let error: string | null = null;
+	export let data: PageData;
+
+	let recipe: RecipeResponse | null = data.recipe;
+	let loading = false;
+	let error: string | null = data.error;
+
+	$: isExternalRecipe = recipe ? recipe.source !== 'internal' : false;
+	$: isEditable = recipe ? !isExternalRecipe : false;
 
 	$: recipeId = parseInt($page.params.id);
-
-	onMount(async () => {
-		if (isNaN(recipeId)) {
-			error = 'Invalid recipe ID';
-			loading = false;
-			return;
-		}
-
-		try {
-			recipe = await recipesApi.getById(recipeId);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load recipe';
-		} finally {
-			loading = false;
-		}
-	});
 
 	function formatTime(time: string): string {
 		return time.replace(/(\d+)/, '$1');
@@ -104,21 +92,35 @@
 						<div class="flex items-center gap-1">
 							🔥 Cook: <span class="font-medium">{formatTime(recipe.cookTime)}</span>
 						</div>
-						{#if recipe.source !== 'internal'}
-							<div class="flex items-center gap-1">
-								🌐 Source: <span class="font-medium">{recipe.source}</span>
+						{#if isExternalRecipe}
+							<div class="flex items-center gap-2">
+								<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+									🌐 {recipe.source}
+								</span>
+								<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
+									External Recipe - Read Only
+								</span>
 							</div>
 						{/if}
 					</div>
 
 					<!-- Actions -->
 					<div class="flex gap-3 mt-6">
-						<a
-							href="/recipes/{recipe.id}/edit"
-							class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
-						>
-							Edit Recipe
-						</a>
+						{#if isEditable}
+							<a
+								href="/recipes/{recipe.id}/edit"
+								class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+							>
+								Edit Recipe
+							</a>
+						{:else}
+							<div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-md">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-6V9a4 4 0 1 0-8 0v2m0 0V9a4 4 0 1 0 8 0v2"></path>
+								</svg>
+								<span class="text-sm font-medium">External Recipe - Cannot Edit</span>
+							</div>
+						{/if}
 						<button
 							on:click={() => goto('/')}
 							class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors duration-200"

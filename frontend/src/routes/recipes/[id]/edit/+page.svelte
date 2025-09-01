@@ -1,34 +1,19 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import RecipeForm from '../../../../lib/components/RecipeForm.svelte';
-	import LoadingSpinner from '../../../../lib/components/LoadingSpinner.svelte';
 	import { recipesApi } from '../../../../lib/api/recipes.js';
 	import type { RecipeResponse, RecipeRequest } from '../../../../lib/types/recipe.js';
+	import type { PageData } from './$types';
 
-	let recipe: RecipeResponse | null = null;
-	let isLoading = true;
+	export let data: PageData;
+
+	let recipe: RecipeResponse | null = data.recipe;
+	let isLoading = false;
 	let isSubmitting = false;
-	let error: string | null = null;
+	let error: string | null = data.error;
 
 	$: recipeId = parseInt($page.params.id);
-
-	onMount(async () => {
-		if (isNaN(recipeId)) {
-			error = 'Invalid recipe ID';
-			isLoading = false;
-			return;
-		}
-
-		try {
-			recipe = await recipesApi.getById(recipeId);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load recipe';
-		} finally {
-			isLoading = false;
-		}
-	});
 
 	async function handleSubmit(event: CustomEvent<RecipeRequest>) {
 		const recipeData = event.detail;
@@ -71,11 +56,7 @@
 			</button>
 		</div>
 
-		{#if isLoading}
-			<div class="flex justify-center py-12">
-				<LoadingSpinner size="lg" message="Loading recipe..." />
-			</div>
-		{:else if error && !recipe}
+		{#if error && !recipe}
 			<div class="text-center py-12">
 				<div class="text-6xl mb-4">😞</div>
 				<h2 class="text-xl font-semibold text-gray-900 mb-2">Recipe Not Found</h2>

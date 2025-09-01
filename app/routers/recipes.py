@@ -42,12 +42,25 @@ async def search_recipes(
 
 
 @router.get("/{recipe_id}", response_model=RecipeResponse)
-def get_recipe_by_id(recipe_id: int, repository: RecipeRepository = Depends(get_recipe_repository)):
-    """Get a specific recipe by ID."""
+async def get_recipe_by_id(
+    recipe_id: int, 
+    repository: RecipeRepository = Depends(get_recipe_repository),
+    mealdb_service: MealDBService = Depends(get_mealdb_service)
+):
+    """Get a specific recipe by ID from either internal database or MealDB."""
+    # First, try to get from internal database
     recipe = repository.get_by_id(recipe_id)
-    if recipe is None:
-        raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
-    return RecipeResponse(**recipe.model_dump())
+    if recipe is not None:
+        return RecipeResponse(**recipe.model_dump())
+    
+    # If not found internally and ID suggests it might be from MealDB (typically > 50000), try MealDB
+    if recipe_id > 50000:
+        mealdb_recipe = await mealdb_service.get_meal_by_id(recipe_id)
+        if mealdb_recipe is not None:
+            return RecipeResponse(**mealdb_recipe.model_dump())
+    
+    # Not found in either source
+    raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
 
 
 @router.post("", response_model=RecipeResponse, status_code=201)

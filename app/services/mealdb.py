@@ -4,7 +4,7 @@ import httpx
 import json
 import logging
 from json import JSONDecodeError
-from typing import List
+from typing import List, Optional
 
 from app.models import Recipe
 from .cache import RedisCache
@@ -19,6 +19,53 @@ class MealDBService:
     def __init__(self, cache: RedisCache):
         self.cache = cache
     
+    async def get_meal_by_id(self, meal_id: int) -> Optional[Recipe]:
+        """Get a specific meal by ID from TheMealDB API with Redis caching."""
+        # Create cache key for individual meal
+        cache_key = f"mealdb:meal:{meal_id}"
+        
+        # Try to get from cache first
+        cached_result = await self.cache.get(cache_key)
+        if cached_result:
+            try:
+                # Deserialize cached recipe
+                cached_data = json.loads(cached_result)
+                if cached_data:  # Check if not None/empty
+                    return Recipe(**cached_data)
+                else:
+                    return None  # Cached "not found" result
+            except (JSONDecodeError, TypeError) as e:
+                logging.warning(f"Failed to deserialize cached meal {meal_id}: {e}")
+                # Continue to fetch from API if cache is corrupted
+        
+        # Cache miss - fetch from MealDB API
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{self.BASE_URL}/lookup.php", params={"i": meal_id})
+                response.raise_for_status()
+                data = response.json()
+                
+                if not data.get("meals") or not data["meals"]:
+                    # Cache negative result to avoid repeated API calls
+                    await self.cache.set(cache_key, json.dumps(None), self.CACHE_TTL)
+                    return None
+                
+                meal = data["meals"][0]  # MealDB returns array with single item
+                recipe = self._transform_meal_to_recipe(meal)
+                
+                # Cache the result
+                try:
+                    await self.cache.set(cache_key, json.dumps(recipe.model_dump()), self.CACHE_TTL)
+                except (TypeError, Exception) as e:
+                    logging.warning(f"Failed to cache meal {meal_id}: {e}")
+                
+                return recipe
+        except (httpx.RequestError, httpx.HTTPStatusError, KeyError) as e:
+            logging.error(f"Error fetching meal {meal_id} from MealDB: {e}")
+            # Cache negative result to avoid repeated failures
+            await self.cache.set(cache_key, json.dumps(None), 300)  # 5 minute cache for errors
+            return None
+
     async def search_meals(self, query: str) -> List[Recipe]:
         """Search for meals by name from TheMealDB API with Redis caching."""
         if not query:
