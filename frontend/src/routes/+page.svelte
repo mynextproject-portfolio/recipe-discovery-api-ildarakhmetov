@@ -15,7 +15,8 @@
 	let currentError: string | null = data.error || null;
 	let loading = false;
 	let searching = false;
-	let query = '';
+	let query = '';           // What user is typing
+	let activeQuery = '';     // What was actually searched
 
 	onMount(() => {
 		// Set initial data from server-side load
@@ -47,7 +48,7 @@
 
 	async function handleSearch(event: CustomEvent<string>) {
 		const searchTerm = event.detail;
-		query = searchTerm;
+		activeQuery = searchTerm;  // Set the active search term
 		searching = true;
 		currentError = null;
 
@@ -66,6 +67,7 @@
 
 	function handleClearSearch() {
 		query = '';
+		activeQuery = '';  // Clear both input and active query
 		displayedRecipes = allRecipes;
 		searchQuery.set('');
 		searchResults.set([]);
@@ -100,7 +102,7 @@
 		<!-- Actions Bar -->
 		<div class="flex justify-between items-center mb-8">
 			<h2 class="text-xl font-semibold text-gray-900">
-				{query ? `Search Results for "${query}"` : 'All Recipes'}
+				{activeQuery ? `Search Results for "${activeQuery}"` : 'All Recipes'}
 				<span class="text-gray-500 text-base font-normal">
 					({displayedRecipes.length} {displayedRecipes.length === 1 ? 'recipe' : 'recipes'})
 				</span>
@@ -130,15 +132,15 @@
 			<div class="text-center py-12">
 				<div class="text-6xl mb-4">🍽️</div>
 				<h3 class="text-lg font-medium text-gray-900 mb-2">
-					{query ? 'No recipes found' : 'No recipes yet'}
+					{activeQuery ? 'No recipes found' : 'No recipes yet'}
 				</h3>
 				<p class="text-gray-600 mb-6">
-					{query 
+					{activeQuery 
 						? `Try searching for something else or browse all recipes.`
 						: 'Get started by adding your first recipe!'
 					}
 				</p>
-				{#if query}
+				{#if activeQuery}
 					<button
 						on:click={handleClearSearch}
 						class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 mr-4"
