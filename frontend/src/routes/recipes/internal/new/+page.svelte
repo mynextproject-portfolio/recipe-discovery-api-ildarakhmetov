@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import RecipeForm from '../../../lib/components/RecipeForm.svelte';
-	import { recipesApi } from '../../../lib/api/recipes.js';
-	import type { RecipeRequest } from '../../../lib/types/recipe.js';
+	import RecipeForm from '../../../../lib/components/RecipeForm.svelte';
+	import { recipesApi } from '../../../../lib/api/recipes.js';
+	import type { RecipeRequest } from '../../../../lib/types/recipe.js';
 
 	let isSubmitting = false;
 	let error: string | null = null;
@@ -15,7 +15,7 @@
 		try {
 			const newRecipe = await recipesApi.create(recipeData);
 			// Redirect to the new recipe's detail page
-			goto(`/recipes/${newRecipe.id}`);
+			goto(`/recipes/internal/${newRecipe.id}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to create recipe';
 		} finally {

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import LoadingSpinner from '../../../lib/components/LoadingSpinner.svelte';
-	import type { RecipeResponse } from '../../../lib/types/recipe.js';
+	import LoadingSpinner from '../../../../lib/components/LoadingSpinner.svelte';
+	import type { RecipeResponse } from '../../../../lib/types/recipe.js';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
@@ -11,10 +11,10 @@
 	let loading = false;
 	let error: string | null = data.error;
 
-	$: isExternalRecipe = recipe ? recipe.source !== 'internal' : false;
-	$: isEditable = recipe ? !isExternalRecipe : false;
-
+	$: source = $page.params.source;
 	$: recipeId = parseInt($page.params.id);
+	$: isExternalRecipe = source !== 'internal';
+	$: isEditable = !isExternalRecipe;
 
 	function formatTime(time: string): string {
 		return time.replace(/(\d+)/, '$1');
@@ -108,7 +108,7 @@
 					<div class="flex gap-3 mt-6">
 						{#if isEditable}
 							<a
-								href="/recipes/{recipe.id}/edit"
+								href="/recipes/{source}/{recipe.id}/edit"
 								class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
 							>
 								Edit Recipe

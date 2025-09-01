@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import RecipeForm from '../../../../lib/components/RecipeForm.svelte';
-	import { recipesApi } from '../../../../lib/api/recipes.js';
-	import type { RecipeResponse, RecipeRequest } from '../../../../lib/types/recipe.js';
+	import RecipeForm from '../../../../../lib/components/RecipeForm.svelte';
+	import { recipesApi } from '../../../../../lib/api/recipes.js';
+	import type { RecipeResponse, RecipeRequest } from '../../../../../lib/types/recipe.js';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
@@ -13,6 +13,7 @@
 	let isSubmitting = false;
 	let error: string | null = data.error;
 
+	$: source = $page.params.source;
 	$: recipeId = parseInt($page.params.id);
 
 	async function handleSubmit(event: CustomEvent<RecipeRequest>) {
@@ -21,9 +22,9 @@
 		error = null;
 
 		try {
-			const updatedRecipe = await recipesApi.update(recipeId, recipeData);
+			const updatedRecipe = await recipesApi.updateInternal(recipeId, recipeData);
 			// Redirect to the updated recipe's detail page
-			goto(`/recipes/${updatedRecipe.id}`);
+			goto(`/recipes/internal/${updatedRecipe.id}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to update recipe';
 		} finally {
@@ -32,7 +33,7 @@
 	}
 
 	function handleCancel() {
-		goto(`/recipes/${recipeId}`);
+		goto(`/recipes/${source}/${recipeId}`);
 	}
 </script>
 

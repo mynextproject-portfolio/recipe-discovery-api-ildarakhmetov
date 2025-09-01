@@ -1,18 +1,25 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { RecipeResponse } from '../../../../lib/types/recipe.js';
+import type { RecipeResponse } from '../../../../../lib/types/recipe.js';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const recipeId = parseInt(params.id);
+	const source = params.source;
 	
 	if (isNaN(recipeId)) {
 		throw redirect(307, '/');
 	}
 
+	// Only internal recipes can be edited
+	if (source !== 'internal') {
+		console.log(`Redirect: Cannot edit ${source} recipe ${recipeId}`);
+		throw redirect(307, `/recipes/${source}/${recipeId}`);
+	}
+
 	try {
-		// Server-side fetch to check if recipe exists and is editable
+		// Server-side fetch to get the internal recipe
 		const serverApiUrl = 'http://api:8000';
-		const response = await fetch(`${serverApiUrl}/recipes/${recipeId}`);
+		const response = await fetch(`${serverApiUrl}/recipes/internal/${recipeId}`);
 		
 		if (!response.ok) {
 			if (response.status === 404) {
@@ -22,14 +29,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		}
 		
 		const recipe: RecipeResponse = await response.json();
-		
-		// Redirect if this is an external recipe (not editable)
-		if (recipe.source !== 'internal') {
-			console.log(`Redirect: Recipe ${recipeId} is from ${recipe.source}, not editable`);
-			throw redirect(307, `/recipes/${recipeId}?error=external-recipe`);
-		}
-		
-		console.log(`Loading editable recipe ${recipeId}:`, recipe.title);
+		console.log(`Loading editable internal recipe ${recipeId}:`, recipe.title);
 		
 		return {
 			recipe,

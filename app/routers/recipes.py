@@ -41,26 +41,22 @@ async def search_recipes(
     return [RecipeResponse(**recipe.model_dump()) for recipe in all_recipes]
 
 
-@router.get("/{recipe_id}", response_model=RecipeResponse)
-async def get_recipe_by_id(
-    recipe_id: int, 
-    repository: RecipeRepository = Depends(get_recipe_repository),
-    mealdb_service: MealDBService = Depends(get_mealdb_service)
-):
-    """Get a specific recipe by ID from either internal database or MealDB."""
-    # First, try to get from internal database
+@router.get("/internal/{recipe_id}", response_model=RecipeResponse)
+def get_internal_recipe_by_id(recipe_id: int, repository: RecipeRepository = Depends(get_recipe_repository)):
+    """Get a specific internal recipe by ID."""
     recipe = repository.get_by_id(recipe_id)
-    if recipe is not None:
-        return RecipeResponse(**recipe.model_dump())
-    
-    # If not found internally and ID suggests it might be from MealDB (typically > 50000), try MealDB
-    if recipe_id > 50000:
-        mealdb_recipe = await mealdb_service.get_meal_by_id(recipe_id)
-        if mealdb_recipe is not None:
-            return RecipeResponse(**mealdb_recipe.model_dump())
-    
-    # Not found in either source
-    raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
+    if recipe is None:
+        raise HTTPException(status_code=404, detail=f"Internal recipe with id {recipe_id} not found")
+    return RecipeResponse(**recipe.model_dump())
+
+
+@router.get("/external/mealdb/{recipe_id}", response_model=RecipeResponse)
+async def get_mealdb_recipe_by_id(recipe_id: int, mealdb_service: MealDBService = Depends(get_mealdb_service)):
+    """Get a specific MealDB recipe by ID."""
+    recipe = await mealdb_service.get_meal_by_id(recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail=f"MealDB recipe with id {recipe_id} not found")
+    return RecipeResponse(**recipe.model_dump())
 
 
 @router.post("", response_model=RecipeResponse, status_code=201)
@@ -70,10 +66,10 @@ def create_recipe(recipe_request: RecipeRequest, repository: RecipeRepository = 
     return RecipeResponse(**recipe.model_dump())
 
 
-@router.put("/{recipe_id}", response_model=RecipeResponse)
-def update_recipe(recipe_id: int, recipe_request: RecipeRequest, repository: RecipeRepository = Depends(get_recipe_repository)):
-    """Update an existing recipe."""
+@router.put("/internal/{recipe_id}", response_model=RecipeResponse)
+def update_internal_recipe(recipe_id: int, recipe_request: RecipeRequest, repository: RecipeRepository = Depends(get_recipe_repository)):
+    """Update an existing internal recipe. External recipes cannot be updated."""
     recipe = repository.update(recipe_id, recipe_request)
     if recipe is None:
-        raise HTTPException(status_code=404, detail=f"Recipe with id {recipe_id} not found")
+        raise HTTPException(status_code=404, detail=f"Internal recipe with id {recipe_id} not found")
     return RecipeResponse(**recipe.model_dump())

@@ -106,7 +106,7 @@
 				</span>
 			</h2>
 			<a
-				href="/recipes/new"
+				href="/recipes/internal/new"
 				class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
 			>
 				+ Add Recipe
@@ -147,7 +147,7 @@
 					</button>
 				{/if}
 				<a
-					href="/recipes/new"
+					href="/recipes/internal/new"
 					class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
 				>
 					Add First Recipe

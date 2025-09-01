@@ -1,8 +1,9 @@
 import type { PageServerLoad } from './$types';
-import type { RecipeResponse } from '../../../lib/types/recipe.js';
+import type { RecipeResponse } from '../../../../lib/types/recipe.js';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const recipeId = parseInt(params.id);
+	const source = params.source;
 	
 	if (isNaN(recipeId)) {
 		return {
@@ -11,10 +12,25 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		};
 	}
 
+	if (!['internal', 'mealdb'].includes(source)) {
+		return {
+			recipe: null,
+			error: 'Invalid recipe source'
+		};
+	}
+
 	try {
 		// Server-side fetch using Docker internal network
 		const serverApiUrl = 'http://api:8000';
-		const response = await fetch(`${serverApiUrl}/recipes/${recipeId}`);
+		let apiPath: string;
+		
+		if (source === 'internal') {
+			apiPath = `/recipes/internal/${recipeId}`;
+		} else {
+			apiPath = `/recipes/external/${source}/${recipeId}`;
+		}
+		
+		const response = await fetch(`${serverApiUrl}${apiPath}`);
 		
 		if (!response.ok) {
 			if (response.status === 404) {
@@ -27,10 +43,11 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		}
 		
 		const recipe: RecipeResponse = await response.json();
-		console.log(`Loaded recipe ${recipeId} from API:`, recipe.title, `(source: ${recipe.source})`);
+		console.log(`Loaded ${source} recipe ${recipeId}:`, recipe.title);
 		
 		return {
 			recipe,
+			source,
 			error: null
 		};
 	} catch (error) {
