@@ -1,0 +1,171 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import LoadingSpinner from '../../../lib/components/LoadingSpinner.svelte';
+	import { recipesApi } from '../../../lib/api/recipes.js';
+	import type { RecipeResponse } from '../../../lib/types/recipe.js';
+
+	let recipe: RecipeResponse | null = null;
+	let loading = true;
+	let error: string | null = null;
+
+	$: recipeId = parseInt($page.params.id);
+
+	onMount(async () => {
+		if (isNaN(recipeId)) {
+			error = 'Invalid recipe ID';
+			loading = false;
+			return;
+		}
+
+		try {
+			recipe = await recipesApi.getById(recipeId);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load recipe';
+		} finally {
+			loading = false;
+		}
+	});
+
+	function formatTime(time: string): string {
+		return time.replace(/(\d+)/, '$1');
+	}
+
+	function getDifficultyColor(difficulty: string): string {
+		switch (difficulty.toLowerCase()) {
+			case 'easy':
+				return 'bg-green-100 text-green-800';
+			case 'medium':
+				return 'bg-yellow-100 text-yellow-800';
+			case 'hard':
+				return 'bg-red-100 text-red-800';
+			default:
+				return 'bg-gray-100 text-gray-800';
+		}
+	}
+</script>
+
+<svelte:head>
+	<title>{recipe?.title || 'Recipe'} - Recipe Discovery</title>
+	<meta name="description" content={recipe?.title ? `Learn how to make ${recipe.title}` : 'Recipe details'} />
+</svelte:head>
+
+<div class="min-h-screen bg-gray-50">
+	<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Back Button -->
+		<div class="mb-6">
+			<button
+				on:click={() => goto('/')}
+				class="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+			>
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+				</svg>
+				Back to Recipes
+			</button>
+		</div>
+
+		{#if loading}
+			<div class="flex justify-center py-12">
+				<LoadingSpinner size="lg" message="Loading recipe..." />
+			</div>
+		{:else if error}
+			<div class="text-center py-12">
+				<div class="text-6xl mb-4">😞</div>
+				<h2 class="text-xl font-semibold text-gray-900 mb-2">Recipe Not Found</h2>
+				<p class="text-gray-600 mb-6">{error}</p>
+				<button
+					on:click={() => goto('/')}
+					class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+				>
+					Go Back Home
+				</button>
+			</div>
+		{:else if recipe}
+			<div class="bg-white rounded-lg shadow-md overflow-hidden">
+				<!-- Header -->
+				<div class="p-6 border-b border-gray-200">
+					<div class="flex justify-between items-start mb-4">
+						<h1 class="text-3xl font-bold text-gray-900">{recipe.title}</h1>
+						<span class="px-3 py-1 text-sm font-medium rounded-full {getDifficultyColor(recipe.difficulty)}">
+							{recipe.difficulty}
+						</span>
+					</div>
+
+					<!-- Recipe Meta Info -->
+					<div class="flex flex-wrap gap-6 text-sm text-gray-600">
+						<div class="flex items-center gap-1">
+							🍽️ <span class="font-medium">{recipe.cuisine}</span>
+						</div>
+						<div class="flex items-center gap-1">
+							⏱️ Prep: <span class="font-medium">{formatTime(recipe.prepTime)}</span>
+						</div>
+						<div class="flex items-center gap-1">
+							🔥 Cook: <span class="font-medium">{formatTime(recipe.cookTime)}</span>
+						</div>
+						{#if recipe.source !== 'internal'}
+							<div class="flex items-center gap-1">
+								🌐 Source: <span class="font-medium">{recipe.source}</span>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Actions -->
+					<div class="flex gap-3 mt-6">
+						<a
+							href="/recipes/{recipe.id}/edit"
+							class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
+						>
+							Edit Recipe
+						</a>
+						<button
+							on:click={() => goto('/')}
+							class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors duration-200"
+						>
+							Back to All Recipes
+						</button>
+					</div>
+				</div>
+
+				<div class="p-6">
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+						<!-- Ingredients -->
+						<div>
+							<h2 class="text-xl font-semibold text-gray-900 mb-4">
+								Ingredients ({recipe.ingredients.length})
+							</h2>
+							<ul class="space-y-2">
+								{#each recipe.ingredients as ingredient, index}
+									<li class="flex items-start gap-3">
+										<span class="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+											{index + 1}
+										</span>
+										<span class="text-gray-700">{ingredient}</span>
+									</li>
+								{/each}
+							</ul>
+						</div>
+
+						<!-- Instructions -->
+						<div>
+							<h2 class="text-xl font-semibold text-gray-900 mb-4">
+								Instructions ({recipe.steps.length} steps)
+							</h2>
+							<ol class="space-y-4">
+								{#each recipe.steps as step, index}
+									<li class="flex items-start gap-3">
+										<span class="flex-shrink-0 w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
+											{index + 1}
+										</span>
+										<p class="text-gray-700 leading-relaxed">{step}</p>
+									</li>
+								{/each}
+							</ol>
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
+	</main>
+</div>
