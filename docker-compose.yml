@@ -13,6 +13,23 @@ services:
     depends_on:
       - redis
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=development
+    container_name: recipe-frontend-dev
+    depends_on:
+      - api
+    volumes:
+      # For development hot reloading
+      - ./frontend:/app
+      - /app/node_modules
+
   redis:
     image: redis:7-alpine
     ports:
