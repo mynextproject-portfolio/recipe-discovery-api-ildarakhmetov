@@ -1,4 +1,4 @@
 # Models package
-from .recipe import Recipe, RecipeRequest, RecipeResponse
+from .recipe import Recipe, RecipeRequest, RecipeResponse, CacheInfo
 
-__all__ = ["Recipe", "RecipeRequest", "RecipeResponse"]
+__all__ = ["Recipe", "RecipeRequest", "RecipeResponse", "CacheInfo"]

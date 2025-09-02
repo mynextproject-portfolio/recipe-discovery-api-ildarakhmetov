@@ -4,16 +4,23 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 
+class CacheInfo(BaseModel):
+    """Cache performance information."""
+    hit: bool                    # True if cache hit, False if cache miss
+    response_time_ms: float     # Response time in milliseconds
+    source: str                 # "cache" or "api"
+
+
 class Recipe(BaseModel):
     """Complete recipe model with all fields."""
     id: Optional[int] = None
     title: str
     ingredients: List[str]
     steps: List[str]
-    prepTime: str
-    cookTime: str
-    difficulty: str
-    cuisine: str
+    prepTime: Optional[str] = None  # Allow null for external recipes
+    cookTime: Optional[str] = None  # Allow null for external recipes
+    difficulty: Optional[str] = None  # Allow null for external recipes
+    cuisine: Optional[str] = None  # Allow null for external recipes
     source: str = "internal"  # Default to internal for existing recipes
 
 
@@ -34,8 +41,9 @@ class RecipeResponse(BaseModel):
     title: str
     ingredients: List[str]
     steps: List[str]
-    prepTime: str
-    cookTime: str
-    difficulty: str
-    cuisine: str
+    prepTime: Optional[str] = None  # Allow null for external recipes
+    cookTime: Optional[str] = None  # Allow null for external recipes
+    difficulty: Optional[str] = None  # Allow null for external recipes
+    cuisine: Optional[str] = None  # Allow null for external recipes
     source: str
+    cache_info: Optional[CacheInfo] = None
