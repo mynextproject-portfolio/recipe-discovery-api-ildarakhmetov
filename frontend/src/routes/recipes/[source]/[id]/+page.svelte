@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import LoadingSpinner from '../../../../lib/components/LoadingSpinner.svelte';
+	import CacheIndicator from '../../../../lib/components/CacheIndicator.svelte';
 	import type { RecipeResponse } from '../../../../lib/types/recipe.js';
 	import type { PageData } from './$types';
 
@@ -100,6 +101,9 @@
 								<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
 									External Recipe - Read Only
 								</span>
+								{#if recipe.cache_info}
+									<CacheIndicator cacheInfo={recipe.cache_info} size="md" />
+								{/if}
 							</div>
 						{/if}
 					</div>
