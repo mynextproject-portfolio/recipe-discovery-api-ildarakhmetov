@@ -4,9 +4,10 @@
 	import RecipeCard from '../lib/components/RecipeCard.svelte';
 	import SearchBar from '../lib/components/SearchBar.svelte';
 	import LoadingSpinner from '../lib/components/LoadingSpinner.svelte';
+	import CacheIndicator from '../lib/components/CacheIndicator.svelte';
 	import { recipesApi } from '../lib/api/recipes.js';
 	import { recipes, searchResults, isLoading, error, searchQuery, isSearching } from '../lib/stores/recipes.js';
-	import type { RecipeResponse } from '../lib/types/recipe.js';
+	import type { RecipeResponse, CacheInfo } from '../lib/types/recipe.js';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
@@ -18,6 +19,7 @@
 	let searching = false;
 	let query = '';           // What user is typing
 	let activeQuery = '';     // What was actually searched
+	let mealdbCacheInfo: CacheInfo | undefined = undefined;  // Cache info for MealDB search
 
 	onMount(() => {
 		// Set initial data from server-side load
@@ -47,6 +49,7 @@
 			activeQuery = '';
 			query = '';
 			displayedRecipes = allRecipes;
+			mealdbCacheInfo = undefined;  // Clear cache info
 			console.log('Cleared search state - showing all recipes');
 		}
 	}
@@ -74,9 +77,12 @@
 		currentError = null;
 
 		try {
-			const results = await recipesApi.search(searchTerm);
-			displayedRecipes = results;
-			searchResults.set(results);
+			const searchResponse = await recipesApi.search(searchTerm);
+			displayedRecipes = searchResponse.recipes;
+			// Store both recipes and cache info
+			searchResults.set(searchResponse.recipes);
+			// Store MealDB cache info for display
+			mealdbCacheInfo = searchResponse.mealdb_cache_info;
 		} catch (err) {
 			currentError = err instanceof Error ? err.message : 'Search failed';
 			error.set(currentError);
@@ -90,6 +96,7 @@
 		query = '';
 		activeQuery = '';  // Clear both input and active query
 		displayedRecipes = allRecipes;
+		mealdbCacheInfo = undefined;  // Clear cache info
 		searchQuery.set('');
 		searchResults.set([]);
 	}
@@ -122,12 +129,20 @@
 	<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 		<!-- Actions Bar -->
 		<div class="flex justify-between items-center mb-8">
-			<h2 class="text-xl font-semibold text-gray-900">
-				{activeQuery ? `Search Results for "${activeQuery}"` : 'All Recipes'}
-				<span class="text-gray-500 text-base font-normal">
-					({displayedRecipes.length} {displayedRecipes.length === 1 ? 'recipe' : 'recipes'})
-				</span>
-			</h2>
+			<div class="flex items-center gap-3">
+				<h2 class="text-xl font-semibold text-gray-900">
+					{activeQuery ? `Search Results for "${activeQuery}"` : 'All Recipes'}
+					<span class="text-gray-500 text-base font-normal">
+						({displayedRecipes.length} {displayedRecipes.length === 1 ? 'recipe' : 'recipes'})
+					</span>
+				</h2>
+				{#if activeQuery && mealdbCacheInfo}
+					<div class="flex items-center gap-2">
+						<span class="text-sm text-gray-600">MealDB:</span>
+						<CacheIndicator cacheInfo={mealdbCacheInfo} size="md" />
+					</div>
+				{/if}
+			</div>
 			<a
 				href="/recipes/internal/new"
 				class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
