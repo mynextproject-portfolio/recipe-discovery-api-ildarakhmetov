@@ -12,8 +12,8 @@
 	let loading = false;
 	let error: string | null = data.error;
 
-	$: source = $page.params.source;
-	$: recipeId = parseInt($page.params.id);
+	$: source = $page.params.source || '';
+	$: recipeId = parseInt($page.params.id || '0');
 	$: isExternalRecipe = source !== 'internal';
 	$: isEditable = !isExternalRecipe;
 
@@ -75,31 +75,39 @@
 			<div class="bg-white rounded-lg shadow-md overflow-hidden">
 				<!-- Header -->
 				<div class="p-6 border-b border-gray-200">
-					<div class="flex justify-between items-start mb-4">
-						<h1 class="text-3xl font-bold text-gray-900">{recipe.title}</h1>
+									<div class="flex justify-between items-start mb-4">
+					<h1 class="text-3xl font-bold text-gray-900">{recipe.title}</h1>
+					{#if recipe.difficulty}
 						<span class="px-3 py-1 text-sm font-medium rounded-full {getDifficultyColor(recipe.difficulty)}">
 							{recipe.difficulty}
 						</span>
-					</div>
+					{/if}
+				</div>
 
 					<!-- Recipe Meta Info -->
 					<div class="flex flex-wrap gap-6 text-sm text-gray-600">
-						<div class="flex items-center gap-1">
-							🍽️ <span class="font-medium">{recipe.cuisine}</span>
-						</div>
-						<div class="flex items-center gap-1">
-							⏱️ Prep: <span class="font-medium">{formatTime(recipe.prepTime)}</span>
-						</div>
-						<div class="flex items-center gap-1">
-							🔥 Cook: <span class="font-medium">{formatTime(recipe.cookTime)}</span>
-						</div>
+						{#if recipe.cuisine}
+							<div class="flex items-center gap-1">
+								🍽️ <span class="font-medium">{recipe.cuisine}</span>
+							</div>
+						{/if}
+						{#if recipe.prepTime}
+							<div class="flex items-center gap-1">
+								⏱️ Prep: <span class="font-medium">{formatTime(recipe.prepTime)}</span>
+							</div>
+						{/if}
+						{#if recipe.cookTime}
+							<div class="flex items-center gap-1">
+								🔥 Cook: <span class="font-medium">{formatTime(recipe.cookTime)}</span>
+							</div>
+						{/if}
 						{#if isExternalRecipe}
 							<div class="flex items-center gap-2">
 								<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
 									🌐 {recipe.source}
 								</span>
 								<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
-									External Recipe - Read Only
+									Read Only
 								</span>
 								{#if recipe.cache_info}
 									<CacheIndicator cacheInfo={recipe.cache_info} size="md" />
@@ -118,11 +126,11 @@
 								Edit Recipe
 							</a>
 						{:else}
-							<div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-md">
+							<div class="flex items-center gap-2 bg-gray-50 text-gray-500 px-4 py-2 rounded-md cursor-not-allowed">
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-6V9a4 4 0 1 0-8 0v2m0 0V9a4 4 0 1 0 8 0v2"></path>
 								</svg>
-								<span class="text-sm font-medium">External Recipe - Cannot Edit</span>
+								<span class="text-sm font-medium">View Only</span>
 							</div>
 						{/if}
 						<button

@@ -17,10 +17,10 @@ class Recipe(BaseModel):
     title: str
     ingredients: List[str]
     steps: List[str]
-    prepTime: str
-    cookTime: str
-    difficulty: str
-    cuisine: str
+    prepTime: Optional[str] = None  # Allow null for external recipes
+    cookTime: Optional[str] = None  # Allow null for external recipes
+    difficulty: Optional[str] = None  # Allow null for external recipes
+    cuisine: Optional[str] = None  # Allow null for external recipes
     source: str = "internal"  # Default to internal for existing recipes
 
 
@@ -41,9 +41,9 @@ class RecipeResponse(BaseModel):
     title: str
     ingredients: List[str]
     steps: List[str]
-    prepTime: str
-    cookTime: str
-    difficulty: str
-    cuisine: str
+    prepTime: Optional[str] = None  # Allow null for external recipes
+    cookTime: Optional[str] = None  # Allow null for external recipes
+    difficulty: Optional[str] = None  # Allow null for external recipes
+    cuisine: Optional[str] = None  # Allow null for external recipes
     source: str
     cache_info: Optional[CacheInfo] = None

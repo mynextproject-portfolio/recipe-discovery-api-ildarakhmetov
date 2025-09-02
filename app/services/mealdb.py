@@ -167,9 +167,9 @@ class MealDBService:
             title=meal.get("strMeal", "Unknown Recipe"),
             ingredients=ingredients,
             steps=steps,
-            prepTime="Unknown",  # MealDB doesn't provide prep time
-            cookTime="Unknown",  # MealDB doesn't provide cook time
-            difficulty="Unknown",  # MealDB doesn't provide difficulty
-            cuisine=meal.get("strArea", "Unknown"),
+            prepTime=None,  # MealDB doesn't provide prep time
+            cookTime=None,  # MealDB doesn't provide cook time
+            difficulty=None,  # MealDB doesn't provide difficulty
+            cuisine=meal.get("strArea") if meal.get("strArea") else None,
             source="mealdb"
         )
