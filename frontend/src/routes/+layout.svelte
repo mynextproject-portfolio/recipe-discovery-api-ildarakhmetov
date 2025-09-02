@@ -8,7 +8,7 @@
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
 				<div class="flex items-center">
-					<a href="/" class="text-xl font-bold text-gray-900">
+					<a href="/" class="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
 						🍳 Recipe Discovery
 					</a>
 				</div>
@@ -17,13 +17,7 @@
 						href="/"
 						class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
 					>
-						Home
-					</a>
-					<a
-						href="/recipes"
-						class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-					>
-						Browse
+						All Recipes
 					</a>
 					<a
 						href="/recipes/internal/new"

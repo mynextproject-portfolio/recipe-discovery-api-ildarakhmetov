@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import RecipeCard from '../lib/components/RecipeCard.svelte';
 	import SearchBar from '../lib/components/SearchBar.svelte';
 	import LoadingSpinner from '../lib/components/LoadingSpinner.svelte';
@@ -28,7 +29,27 @@
 		}
 		console.log('Client-side API URL:', data.apiUrl);
 		console.log('Loaded recipes from server:', allRecipes.length);
+		
+		// Clear search state when navigating to home
+		clearSearchIfNeeded();
 	});
+
+	// React to URL changes to clear search when user navigates back to home
+	$: {
+		if ($page.url.pathname === '/' && $page.url.search === '') {
+			clearSearchIfNeeded();
+		}
+	}
+
+	function clearSearchIfNeeded() {
+		// Only clear if we currently have search results
+		if (activeQuery) {
+			activeQuery = '';
+			query = '';
+			displayedRecipes = allRecipes;
+			console.log('Cleared search state - showing all recipes');
+		}
+	}
 
 	async function loadAllRecipes() {
 		loading = true;
