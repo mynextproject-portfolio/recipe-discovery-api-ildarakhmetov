@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import type { RecipeResponse } from '../../../../lib/types/recipe.js';
+import { getServerApiUrl } from '../../../../lib/config';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const recipeId = parseInt(params.id);
@@ -20,8 +21,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 	}
 
 	try {
-		// Server-side fetch using Docker internal network
-		const serverApiUrl = 'http://api:8000';
+		// Server-side fetch using environment-aware API URL
+		const serverApiUrl = getServerApiUrl();
 		let apiPath: string;
 		
 		if (source === 'internal') {

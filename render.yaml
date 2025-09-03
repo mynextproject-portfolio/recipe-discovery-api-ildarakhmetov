@@ -1,0 +1,35 @@
+services:
+  # Backend API Service
+  - type: web
+    name: recipe-discovery-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      # Set these in Render dashboard:
+      # REDIS_URL: your Upstash Redis URL
+      # ALLOWED_ORIGINS: https://your-frontend.onrender.com
+
+  # Frontend Service
+  - type: web
+    name: recipe-discovery-frontend
+    env: node
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: node build
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set these in Render dashboard:
+      # PUBLIC_API_URL: https://your-backend.onrender.com
+      # PUBLIC_BACKEND_URL: https://your-backend.onrender.com

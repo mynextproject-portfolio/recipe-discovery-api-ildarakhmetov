@@ -1,10 +1,11 @@
 import type { PageServerLoad } from './$types';
 import type { RecipeResponse } from '../lib/types/recipe.js';
+import { getServerApiUrl } from '../lib/config';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	try {
-		// Server-side fetch - use internal Docker network
-		const serverApiUrl = 'http://api:8000';
+		// Server-side fetch - use environment-aware API URL
+		const serverApiUrl = getServerApiUrl();
 		console.log('Server-side API URL:', serverApiUrl);
 		
 		const response = await fetch(`${serverApiUrl}/recipes`);
@@ -17,16 +18,14 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		console.log(`Loaded ${recipes.length} recipes from API`);
 		
 		return {
-			recipes,
-			apiUrl: process.env.PUBLIC_API_URL || 'http://localhost:8000' // For client-side
+			recipes
 		};
 	} catch (error) {
 		console.error('Server-side API fetch failed:', error);
 		
 		return {
 			recipes: [],
-			error: error instanceof Error ? error.message : 'Failed to load recipes',
-			apiUrl: process.env.PUBLIC_API_URL || 'http://localhost:8000'
+			error: error instanceof Error ? error.message : 'Failed to load recipes'
 		};
 	}
 };
