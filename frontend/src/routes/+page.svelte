@@ -29,7 +29,6 @@
 		if (currentError) {
 			error.set(currentError);
 		}
-		console.log('Client-side API URL:', data.apiUrl);
 		console.log('Loaded recipes from server:', allRecipes.length);
 		
 		// Clear search state when navigating to home

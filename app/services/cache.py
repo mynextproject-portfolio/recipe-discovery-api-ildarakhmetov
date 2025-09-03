@@ -4,12 +4,14 @@ import redis
 import logging
 from typing import Optional
 
+from app.config import settings
+
 
 class RedisCache:
     """Service for Redis caching operations."""
     
-    def __init__(self, redis_url: str = "redis://redis:6379"):
-        self.redis_url = redis_url
+    def __init__(self, redis_url: str = None):
+        self.redis_url = redis_url or settings.REDIS_URL
         self._client = None
     
     def _get_client(self):

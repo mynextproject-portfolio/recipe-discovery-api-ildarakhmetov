@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: recipe-discovery-frontend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: node build
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set these in Render dashboard:
+      # PUBLIC_API_URL: https://your-backend.onrender.com
+      # PUBLIC_BACKEND_URL: https://your-backend.onrender.com (for server-side calls)

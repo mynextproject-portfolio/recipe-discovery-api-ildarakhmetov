@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type { RecipeResponse } from '../../../../../lib/types/recipe.js';
+import { getServerApiUrl } from '../../../../../lib/config';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const recipeId = parseInt(params.id);
@@ -18,7 +19,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 
 	try {
 		// Server-side fetch to get the internal recipe
-		const serverApiUrl = 'http://api:8000';
+		const serverApiUrl = getServerApiUrl();
 		const response = await fetch(`${serverApiUrl}/recipes/internal/${recipeId}`);
 		
 		if (!response.ok) {

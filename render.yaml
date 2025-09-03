@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: recipe-discovery-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      # Redis URL should be set in Render dashboard to your Upstash URL
+      # REDIS_URL: redis://...
+      # ALLOWED_ORIGINS should include your frontend URL
+      # ALLOWED_ORIGINS: https://your-frontend.onrender.com
