@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import type { RecipeResponse } from '../lib/types/recipe.js';
-import { getServerApiUrl } from '../lib/config';
+import type { RecipeResponse } from '$lib/types/recipe.js';
+import { getServerApiUrl } from '$lib/config';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	try {

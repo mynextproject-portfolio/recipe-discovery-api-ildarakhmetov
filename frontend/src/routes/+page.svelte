@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import RecipeCard from '../lib/components/RecipeCard.svelte';
-	import SearchBar from '../lib/components/SearchBar.svelte';
-	import LoadingSpinner from '../lib/components/LoadingSpinner.svelte';
-	import CacheIndicator from '../lib/components/CacheIndicator.svelte';
-	import { recipesApi } from '../lib/api/recipes.js';
-	import { recipes, searchResults, isLoading, error, searchQuery, isSearching } from '../lib/stores/recipes.js';
-	import type { RecipeResponse, CacheInfo } from '../lib/types/recipe.js';
+	import RecipeCard from '$lib/components/RecipeCard.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import CacheIndicator from '$lib/components/CacheIndicator.svelte';
+	import { recipesApi } from '$lib/api/recipes.js';
+	import { recipes, searchResults, isLoading, error, searchQuery, isSearching } from '$lib/stores/recipes.js';
+	import type { RecipeResponse, CacheInfo } from '$lib/types/recipe.js';
 	import type { PageData } from './$types';
 
 	export let data: PageData;

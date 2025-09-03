@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import RecipeForm from '../../../../../lib/components/RecipeForm.svelte';
-	import { recipesApi } from '../../../../../lib/api/recipes.js';
-	import type { RecipeResponse, RecipeRequest } from '../../../../../lib/types/recipe.js';
+	import RecipeForm from '$lib/components/RecipeForm.svelte';
+	import { recipesApi } from '$lib/api/recipes.js';
+	import type { RecipeResponse, RecipeRequest } from '$lib/types/recipe.js';
 	import type { PageData } from './$types';
 
 	export let data: PageData;

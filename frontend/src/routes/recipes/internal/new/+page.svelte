@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import RecipeForm from '../../../../lib/components/RecipeForm.svelte';
-	import { recipesApi } from '../../../../lib/api/recipes.js';
-	import type { RecipeRequest } from '../../../../lib/types/recipe.js';
+	import RecipeForm from '$lib/components/RecipeForm.svelte';
+	import { recipesApi } from '$lib/api/recipes.js';
+	import type { RecipeRequest } from '$lib/types/recipe.js';
 
 	let isSubmitting = false;
 	let error: string | null = null;
