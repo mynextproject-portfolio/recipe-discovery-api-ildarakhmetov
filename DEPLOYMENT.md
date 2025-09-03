@@ -14,9 +14,23 @@ This guide walks you through deploying the Recipe Discovery API on Render with s
 2. [Upstash account](https://upstash.com) with Redis database created
 3. This repository pushed to GitHub
 
-## Backend Deployment
+## Deployment Options
 
-### 1. Create Backend Service
+### Option 1: Deploy from render.yaml (Recommended)
+
+The repository includes a `render.yaml` file that defines both services. This is the easiest method:
+
+1. In Render dashboard, click "New" → "Blueprint"
+2. Connect your GitHub repository
+3. Select the `render.yaml` file
+4. Both services will be created automatically
+5. Set the required environment variables (see below)
+
+### Option 2: Manual Service Creation
+
+If you prefer to create services manually:
+
+#### Backend Service
 
 1. In Render dashboard, click "New" → "Web Service"
 2. Connect your GitHub repository
@@ -28,9 +42,24 @@ This guide walks you through deploying the Recipe Discovery API on Render with s
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 
-### 2. Set Environment Variables
+#### Frontend Service
 
-In the Render dashboard, add these environment variables:
+1. In Render dashboard, click "New" → "Web Service"
+2. Connect your GitHub repository  
+3. Configure the service:
+   - **Name**: `recipe-discovery-frontend` (or your preference)
+   - **Region**: Oregon
+   - **Branch**: `main`
+   - **Root Directory**: `frontend`
+   - **Runtime**: Node
+   - **Build Command**: `npm ci && npm run build`
+   - **Start Command**: `node build`
+
+## Environment Variables
+
+After deployment (regardless of method), set these environment variables in the Render dashboard:
+
+### Backend Service Variables
 
 **Required:**
 ```
@@ -53,28 +82,7 @@ REDIS_URL=rediss://default:abc123@us1-example-12345.upstash.io:12345
 ALLOWED_ORIGINS=https://recipe-discovery-frontend.onrender.com
 ```
 
-### 3. Deploy
-
-Click "Create Web Service" and wait for deployment to complete.
-
-## Frontend Deployment
-
-### 1. Create Frontend Service
-
-1. In Render dashboard, click "New" → "Web Service"
-2. Connect your GitHub repository
-3. Configure the service:
-   - **Name**: `recipe-discovery-frontend` (or your preference)
-   - **Region**: Oregon
-   - **Branch**: `main`
-   - **Root Directory**: `frontend`
-   - **Runtime**: Node
-   - **Build Command**: `npm ci && npm run build`
-   - **Start Command**: `node build`
-
-### 2. Set Environment Variables
-
-In the Render dashboard, add these environment variables:
+### Frontend Service Variables
 
 **Required:**
 ```
@@ -89,10 +97,6 @@ PUBLIC_API_URL=https://recipe-discovery-api.onrender.com
 PUBLIC_BACKEND_URL=https://recipe-discovery-api.onrender.com
 NODE_ENV=production
 ```
-
-### 3. Deploy
-
-Click "Create Web Service" and wait for deployment to complete.
 
 ## Upstash Redis Setup
 
@@ -112,6 +116,12 @@ Click "Create Web Service" and wait for deployment to complete.
 
 ## Deployment Order
 
+### If using render.yaml (Blueprint):
+1. **Deploy Blueprint** - Both services deploy simultaneously
+2. **Set environment variables** - Add Redis URL and configure service URLs
+3. **Update CORS** - Set `ALLOWED_ORIGINS` to include frontend URL
+
+### If deploying manually:
 Deploy in this order to avoid CORS issues:
 
 1. **Backend first** - Deploy and get the backend URL
