@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { RecipeResponse } from '../../../../../lib/types/recipe.js';
-import { getServerApiUrl } from '../../../../../lib/config';
+import type { RecipeResponse } from '$lib/types/recipe.js';
+import { getServerApiUrl } from '$lib/config';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const recipeId = parseInt(params.id);

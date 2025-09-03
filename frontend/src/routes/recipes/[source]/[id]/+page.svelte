@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import LoadingSpinner from '../../../../lib/components/LoadingSpinner.svelte';
-	import CacheIndicator from '../../../../lib/components/CacheIndicator.svelte';
-	import type { RecipeResponse } from '../../../../lib/types/recipe.js';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import CacheIndicator from '$lib/components/CacheIndicator.svelte';
+	import type { RecipeResponse } from '$lib/types/recipe.js';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
