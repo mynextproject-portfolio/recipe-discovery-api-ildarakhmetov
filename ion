@@ -1,0 +1,5 @@
+[33mc0d2c58[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #26 from mynextproject-portfolio/deployment
+[33m7de5104[m[33m ([m[1;31morigin/deployment[m[33m, [m[1;32mdeployment[m[33m)[m refactor: update import paths for consistency across recipe-related files
+[33m3b7d166[m Merge pull request #25 from mynextproject-portfolio/deployment
+[33m004f0c7[m chore: update package.json to manage Tailwind CSS dependencies
+[33m1a44ae0[m Merge pull request #24 from mynextproject-portfolio/deployment
