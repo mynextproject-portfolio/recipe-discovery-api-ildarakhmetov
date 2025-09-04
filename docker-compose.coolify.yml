@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      target: production
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379
+      # Configure CORS origins via Coolify UI as needed, e.g. https://app.example.com
+      # - ALLOWED_ORIGINS=https://your-frontend-domain
+    expose:
+      - "8000"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+      # Set this in Coolify to your public API URL, e.g. https://api.example.com
+      - PUBLIC_API_URL=${PUBLIC_API_URL}
+    expose:
+      - "3000"
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  redis_data:
+
+
