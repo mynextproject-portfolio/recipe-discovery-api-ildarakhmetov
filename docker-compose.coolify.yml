@@ -33,9 +33,8 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=3000
-      # Use Coolify's API FQDN. If you need a different URL, edit here or set
-      # PUBLIC_API_URL directly (without default syntax) in this compose file.
-      - PUBLIC_API_URL=https://${SERVICE_FQDN_API}
+      # Use HTTP for API until TLS is configured to avoid self-signed errors
+      - PUBLIC_API_URL=http://${SERVICE_FQDN_API}
     expose:
       - "3000"
     restart: unless-stopped
